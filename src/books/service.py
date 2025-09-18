@@ -17,12 +17,12 @@ class BookService:
 
     async def get_book(
         self,
-        book_uuid: str,
+        book_uid: str,
         session: AsyncSession,
     ):
-        statement = select(Book).where(Book.uuid == book_uuid)
+        statement = select(Book).where(Book.uid == book_uid)
         result = await session.execute(statement)
-        book = result.first()
+        book = result.scalar_one_or_none()
         return book if book is not None else None
 
     """Function for create book"""
@@ -30,11 +30,9 @@ class BookService:
     async def create_book(self, book_data: BookCreateModal, session: AsyncSession):
         book_data_dict = book_data.model_dump()
         new_book = Book(**book_data_dict)
-        print(book_data_dict, "book_data_dict")
         new_book.published_date = datetime.strptime(
             book_data_dict["published_date"], "%Y-%m-%d"
         )
-        print(new_book, "new_book")
         session.add(new_book)
         await session.commit()
         return new_book
@@ -42,24 +40,32 @@ class BookService:
     """Function for update book"""
 
     async def update_book(
-        self, book_uuid: str, update_data: BookUpdateModal, session: AsyncSession
+        self, book_uid: str, update_data: BookUpdateModal, session: AsyncSession
     ):
-        book_to_update = await self.get_book(book_uuid, session)
+        book_to_update = await self.get_book(book_uid, session)
         if book_to_update is None:
             return None
-        update_data_dict = update_data.model_dump()
+
+        update_data_dict = update_data.model_dump(exclude_unset=True)
+
+        if "published_date" in update_data_dict:
+            update_data_dict["published_date"] = datetime.strptime(
+                update_data_dict["published_date"], "%Y-%m-%d"
+            ).date()
 
         for k, v in update_data_dict.items():
             setattr(book_to_update, k, v)
 
         await session.commit()
+        await session.refresh(book_to_update)
         return book_to_update
 
     """Function for delete book"""
 
-    async def delete_book(self, book_uuid: str, session: AsyncSession):
-        book_to_delete = await self.get_book(book_uuid, session)
+    async def delete_book(self, book_uid: str, session: AsyncSession):
+        book_to_delete = await self.get_book(book_uid, session)
         if book_to_delete is None:
             return None
         await session.delete(book_to_delete)
         await session.commit()
+        return True
