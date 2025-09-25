@@ -1,9 +1,17 @@
 from fastapi.security import HTTPBearer
-from fastapi import Request
+from fastapi import Request, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 from .utils import decode_access_token
 from fastapi import HTTPException, status
 from src.db.redis import token_in_blocklist
+from src.db.main import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from .service import UserService
+from typing import List
+from .models import User
+
+
+user_service = UserService()
 
 
 class TokenBearer(HTTPBearer):
@@ -16,7 +24,6 @@ class TokenBearer(HTTPBearer):
         token_data = decode_access_token(token)
 
         if not self.token_valid(token):
-            print("inside invalid token")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
@@ -62,3 +69,26 @@ class RefreshTokenBearer(TokenBearer):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Please provide refresh token",
             )
+
+
+async def get_current_user(
+    token_details: dict = Depends(AccessTokenBearer()),
+    session: AsyncSession = Depends(get_session),
+):
+    user_email = token_details["user"]["email"]
+    user = await user_service.get_user_by_email(user_email, session=session)
+    return user
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: List[str]) -> None:
+        self.allowed_roles = allowed_roles
+
+    async def __call__(self, current_user: User = Depends(get_current_user)):
+        if current_user.role in self.allowed_roles:
+            return True
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have the necessary permissions",
+        )

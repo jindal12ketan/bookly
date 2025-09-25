@@ -7,11 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .utils import create_access_token, verify_password
 from datetime import timedelta, datetime
 from fastapi.responses import JSONResponse
-from .dependencies import RefreshTokenBearer, AccessTokenBearer
+from .dependencies import (
+    RefreshTokenBearer,
+    AccessTokenBearer,
+    get_current_user,
+    RoleChecker,
+)
+from .models import User
 
-auth_router = APIRouter(prefix="/auth", tags=["auth"])
-
+auth_router = APIRouter()
 user_service = UserService()
+role_checker = RoleChecker(allowed_roles=["admin", "user"])
+
+
 REFRESH_TOKEN_EXPIRY = timedelta(days=30)
 
 
@@ -44,10 +52,10 @@ async def login_user(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials"
         )
     access_token = create_access_token(
-        user_data={"email": user.email, "user_uid": str(user.uid)}
+        user_data={"email": user.email, "user_uid": str(user.uid), "role": user.role}
     )
     refresh_token = create_access_token(
-        user_data={"email": user.email, "user_uid": str(user.uid)},
+        user_data={"email": user.email, "user_uid": str(user.uid), "role": user.role},
         expiry=REFRESH_TOKEN_EXPIRY,
         refresh=True,
     )
@@ -81,3 +89,11 @@ async def logout_user(token_details: dict = Depends(AccessTokenBearer())):
     jti = token_details["jti"]
     await add_jti_to_blocklist(jti)
     return {"message": "Logged out successfully"}
+
+
+@auth_router.get("/me", response_model=UserModel, status_code=status.HTTP_200_OK)
+async def get_current_user(
+    user: User = Depends(get_current_user), _: bool = Depends(role_checker)
+):
+
+    return user

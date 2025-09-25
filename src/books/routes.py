@@ -4,16 +4,23 @@ from typing import List
 from src.books.schema import Book, BookCreateModal, BookUpdateModal
 from src.db.main import get_session
 from src.books.service import BookService
-from src.auth.dependencies import AccessTokenBearer
+from src.auth.dependencies import AccessTokenBearer, RoleChecker
 
 book_router = APIRouter()
-
 book_service = BookService()
 
+# Dependency instances
 access_token_bearer = AccessTokenBearer()
+# Allow both admin and user roles to access book routes
+role_checker = Depends(RoleChecker(allowed_roles=["admin", "user"]))
 
 
-@book_router.get("/", response_model=List[Book], status_code=status.HTTP_200_OK)
+@book_router.get(
+    "/",
+    response_model=List[Book],
+    status_code=status.HTTP_200_OK,
+    dependencies=[role_checker],
+)
 async def get_all_books(
     session: AsyncSession = Depends(get_session),
     user_details=Depends(access_token_bearer),
@@ -21,12 +28,17 @@ async def get_all_books(
     """
     Retrieve all books.
     """
-    print(user_details, "user details from token")
+
     books = await book_service.get_all_books(session)
     return books
 
 
-@book_router.post("/", status_code=status.HTTP_201_CREATED, response_model=Book)
+@book_router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=Book,
+    dependencies=[role_checker],
+)
 async def create_book(
     book_data: BookCreateModal,
     session: AsyncSession = Depends(get_session),
@@ -39,7 +51,12 @@ async def create_book(
     return new_book
 
 
-@book_router.get("/{book_uid}", response_model=Book, status_code=status.HTTP_200_OK)
+@book_router.get(
+    "/{book_uid}",
+    response_model=Book,
+    status_code=status.HTTP_200_OK,
+    dependencies=[role_checker],
+)
 async def get_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
@@ -56,7 +73,12 @@ async def get_book(
     return book
 
 
-@book_router.patch("/{book_uid}", status_code=status.HTTP_200_OK, response_model=Book)
+@book_router.patch(
+    "/{book_uid}",
+    status_code=status.HTTP_200_OK,
+    response_model=Book,
+    dependencies=[role_checker],
+)
 async def update_book(
     book_uid: str,
     book_update_data: BookUpdateModal,
@@ -74,7 +96,11 @@ async def update_book(
     return updated_book
 
 
-@book_router.delete("/{book_uid}", status_code=status.HTTP_204_NO_CONTENT)
+@book_router.delete(
+    "/{book_uid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[role_checker],
+)
 async def delete_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),

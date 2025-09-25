@@ -18,6 +18,7 @@ class UserModel(BaseModel):
     password_hash: str
     first_name: str
     last_name: str
+    role: str
     is_verified: bool = Field(default=False)
     created_at: datetime
     updated_at: datetime
