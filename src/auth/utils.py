@@ -22,7 +22,7 @@ def create_access_token(
     user_data: dict, expiry: timedelta = None, refresh: bool = False
 ) -> str:
     payload = {}
-    payload["user_data"] = user_data
+    payload["user"] = user_data
     payload["exp"] = (
         datetime.now() + expiry
         if expiry is not None
@@ -39,7 +39,7 @@ def create_access_token(
 def decode_access_token(token: str) -> dict:
     try:
         token_data = jwt.decode(
-            token, key=Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM]
+            jwt=token, key=Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM]
         )
         return token_data
     except jwt.PyJWTError as e:

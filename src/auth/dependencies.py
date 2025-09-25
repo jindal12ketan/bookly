@@ -3,6 +3,7 @@ from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from .utils import decode_access_token
 from fastapi import HTTPException, status
+from src.db.redis import token_in_blocklist
 
 
 class TokenBearer(HTTPBearer):
@@ -15,8 +16,22 @@ class TokenBearer(HTTPBearer):
         token_data = decode_access_token(token)
 
         if not self.token_valid(token):
+            print("inside invalid token")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or Expired token"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "Token has been revoked",
+                    "resolution": "Please get new token",
+                },
+            )
+
+        if await token_in_blocklist(token_data["jti"]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "Token has been revoked",
+                    "resolution": "Please get new token",
+                },
             )
 
         self.verify_token_data(token_data)
@@ -25,7 +40,7 @@ class TokenBearer(HTTPBearer):
 
     def token_valid(self, token: str) -> bool:
         token_data = decode_access_token(token)
-        return True if token_data is not None else False
+        return token_data is not None
 
     def verify_token_data(self, token_data: dict) -> None:
         raise NotImplementedError("Please override this method in child class")
