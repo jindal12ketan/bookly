@@ -13,7 +13,7 @@ from .dependencies import (
     get_current_user,
     RoleChecker,
 )
-from .models import User
+from src.db.models import User
 
 auth_router = APIRouter()
 user_service = UserService()
