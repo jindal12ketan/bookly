@@ -1,8 +1,10 @@
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, text
 import sqlalchemy.dialects.postgresql as pg
+from typing import List
+from src.books import models
 
 
 class User(SQLModel, table=True):
@@ -25,6 +27,9 @@ class User(SQLModel, table=True):
         sa_column=Column(pg.VARCHAR, nullable=False, server_default="user")
     )
     is_verified: bool = Field(default=False)
+    books: List["models.Book"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"lazy": "selectin"}
+    )  # Establish relationship with Book model
     created_at: datetime = Field(
         sa_column=Column(
             pg.TIMESTAMP(timezone=True),

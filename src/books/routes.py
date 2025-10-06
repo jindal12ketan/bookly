@@ -16,6 +16,25 @@ role_checker = Depends(RoleChecker(allowed_roles=["admin", "user"]))
 
 
 @book_router.get(
+    "/user/{user_uid}",
+    response_model=List[Book],
+    status_code=status.HTTP_200_OK,
+    dependencies=[role_checker],
+)
+async def get_user_book_submissions(
+    user_uid: str,
+    session: AsyncSession = Depends(get_session),
+    token_details=Depends(access_token_bearer),
+):
+    """
+    Retrieve all books submitted by a specific user.
+    """
+
+    books = await book_service.get_users_books(user_uid, session)
+    return books
+
+
+@book_router.get(
     "/",
     response_model=List[Book],
     status_code=status.HTTP_200_OK,
@@ -23,7 +42,7 @@ role_checker = Depends(RoleChecker(allowed_roles=["admin", "user"]))
 )
 async def get_all_books(
     session: AsyncSession = Depends(get_session),
-    user_details=Depends(access_token_bearer),
+    token_details=Depends(access_token_bearer),
 ):
     """
     Retrieve all books.
@@ -42,12 +61,15 @@ async def get_all_books(
 async def create_book(
     book_data: BookCreateModal,
     session: AsyncSession = Depends(get_session),
-    user_details=Depends(access_token_bearer),
+    token_details=Depends(access_token_bearer),
 ) -> dict:
     """
     Create a new book.
     """
-    new_book = await book_service.create_book(book_data, session)
+    user_uid = token_details.get("user")["user_uid"]
+    new_book = await book_service.create_book(
+        book_data, user_uid=user_uid, session=session
+    )
     return new_book
 
 
@@ -60,7 +82,7 @@ async def create_book(
 async def get_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
-    user_details=Depends(access_token_bearer),
+    token_details=Depends(access_token_bearer),
 ) -> dict:
     """
     Retrieve a book by its UUID.
@@ -83,7 +105,7 @@ async def update_book(
     book_uid: str,
     book_update_data: BookUpdateModal,
     session: AsyncSession = Depends(get_session),
-    user_details=Depends(access_token_bearer),
+    token_details=Depends(access_token_bearer),
 ) -> dict:
     """
     Update an existing book.
@@ -104,7 +126,7 @@ async def update_book(
 async def delete_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
-    user_details=Depends(access_token_bearer),
+    token_details=Depends(access_token_bearer),
 ):
     """
     Delete a book by its UUID.

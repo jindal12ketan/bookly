@@ -1,8 +1,10 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, text
 import uuid
+from src.auth import models
 from datetime import datetime, date
 import sqlalchemy.dialects.postgresql as pg
+from typing import Optional
 
 # Book model representing a book entity in the database
 
@@ -26,7 +28,10 @@ class Book(SQLModel, table=True):
     published_date: date
     page_count: int
     language: str
-
+    user_uid: Optional[uuid.UUID] = Field(default=None, foreign_key="users.uid")
+    user: Optional["models.User"] = Relationship(
+        back_populates="books"
+    )  # Relationship with User model
     created_at: datetime = Field(
         sa_column=Column(
             pg.TIMESTAMP(timezone=True),

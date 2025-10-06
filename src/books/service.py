@@ -25,14 +25,28 @@ class BookService:
         book = result.scalar_one_or_none()
         return book if book is not None else None
 
+    """Function for get all books submitted by a user"""
+
+    async def get_users_books(self, user_uid: str, session: AsyncSession):
+        statement = (
+            select(Book)
+            .where(Book.user_uid == user_uid)
+            .order_by(desc(Book.created_at))
+        )
+        result = await session.execute(statement)
+        return result.scalars().all()
+
     """Function for create book"""
 
-    async def create_book(self, book_data: BookCreateModal, session: AsyncSession):
+    async def create_book(
+        self, book_data: BookCreateModal, user_uid: str, session: AsyncSession
+    ):
         book_data_dict = book_data.model_dump()
         new_book = Book(**book_data_dict)
         new_book.published_date = datetime.strptime(
             book_data_dict["published_date"], "%Y-%m-%d"
         )
+        new_book.user_uid = user_uid
         session.add(new_book)
         await session.commit()
         return new_book
