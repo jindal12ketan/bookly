@@ -24,6 +24,9 @@ class UserModel(BaseModel):
     is_verified: bool = Field(default=False)
     created_at: datetime
     updated_at: datetime
+
+
+class UserBooksModel(UserModel):
     books: List[Book]
 
 

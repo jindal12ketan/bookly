@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from src.db.redis import add_jti_to_blocklist
-from .schema import UserCreateModel, UserModel, UserLoginModel
+from .schema import UserCreateModel, UserModel, UserLoginModel, UserBooksModel
 from .service import UserService
 from src.db.main import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -91,7 +91,7 @@ async def logout_user(token_details: dict = Depends(AccessTokenBearer())):
     return {"message": "Logged out successfully"}
 
 
-@auth_router.get("/me", response_model=UserModel, status_code=status.HTTP_200_OK)
+@auth_router.get("/me", response_model=UserBooksModel, status_code=status.HTTP_200_OK)
 async def get_current_user(
     user: User = Depends(get_current_user), _: bool = Depends(role_checker)
 ):
